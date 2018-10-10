@@ -1,0 +1,48 @@
+#!/bin/bash
+
+highest_seqno=-1
+username="ubuntu"
+bootstrap_host=''
+
+# echo "Finding host with highest seqno..."
+
+for host in `cat < "$1"`
+do
+        # echo "Checking $host"
+        seqno=`ssh $username@$host sudo grep seqno /var/lib/mysql/grastate.dat | awk -F' ' '{print $2}'`
+
+        # echo "$host has seqno value $seqno"
+        if [[ $seqno -gt $highest_seqno ]]
+        then
+                highest_seqno=$seqno
+                bootstrap_host=$host
+        fi
+done
+
+# echo "Choosing $bootstrap_host as bootstrap host with $highest_seqno seqno"
+
+# echo "Bootstrapping..."
+
+ssh $username@$bootstrap_host sudo sed -ie "/safe_to/c\safe_to_bootstrap:\ 1" /var/lib/mysql/grastate.dat
+
+ssh $username@$bootstrap_host sudo galera_new_cluster
+
+# echo "Starting services on another host"
+
+for host in `cat < "$1"`
+do
+        if [ "$host" != "$bootstrap_host" ]
+        then
+                ssh $username@$host sudo systemctl start mysql
+        fi
+done
+
+# echo "Stopping bootstrap process from $bootstrap_host"
+
+ssh $username@$bootstrap_host -C "sudo ps -ef | awk '/mysql/{print $2}' | xargs sudo kill"
+
+# echo "Starting normal service on bootstrap host..."
+
+ssh $username@$bootstrap_host sudo systemctl start mysql
+
+# echo "Cluster has been recovered."
