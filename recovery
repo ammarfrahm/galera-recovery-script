@@ -2,47 +2,37 @@
 
 highest_seqno=-1
 username="ubuntu"
-bootstrap_host=''
 
-# echo "Finding host with highest seqno..."
-
-for host in `cat < "$1"`
+for host in `cat < "$1" | sort -rn`
 do
-        # echo "Checking $host"
-        seqno=`ssh $username@$host sudo grep seqno /var/lib/mysql/grastate.dat | awk -F' ' '{print $2}'`
+	seqno=`ssh $username@$host sudo grep seqno /var/lib/mysql/grastate.dat | awk -F' ' '{print $2}'`
 
-        # echo "$host has seqno value $seqno"
-        if [[ $seqno -gt $highest_seqno ]]
-        then
-                highest_seqno=$seqno
-                bootstrap_host=$host
-        fi
+	if [[ $seqno -eq -1 ]]
+	then
+		ssh $username@$host sudo mysqladmin ping &> /dev/null
+		if [ $? -eq 0 ]
+		then
+			bootstrap_host=$host
+			break
+		fi
+	elif [[ $seqno -gt $highest_seqno ]]
+	then
+		highest_seqno=$seqno
+		bootstrap_host=$host
+	fi
 done
 
-# echo "Choosing $bootstrap_host as bootstrap host with $highest_seqno seqno"
+if [[ `ifconfig | grep -c $bootstrap_host` -gt 0 ]]
+then
+	sudo sed -ie "/safe_to/c\safe_to_bootstrap:\ 1" /var/lib/mysql/grastate.dat
+	sudo galera_new_cluster
+else
 
-# echo "Bootstrapping..."
-
-ssh $username@$bootstrap_host sudo sed -ie "/safe_to/c\safe_to_bootstrap:\ 1" /var/lib/mysql/grastate.dat
-
-ssh $username@$bootstrap_host sudo galera_new_cluster
-
-# echo "Starting services on another host"
-
-for host in `cat < "$1"`
-do
-        if [ "$host" != "$bootstrap_host" ]
-        then
-                ssh $username@$host sudo systemctl start mysql
-        fi
-done
-
-# echo "Stopping bootstrap process from $bootstrap_host"
-
-ssh $username@$bootstrap_host -C "sudo ps -ef | awk '/mysql/{print $2}' | xargs sudo kill"
-
-# echo "Starting normal service on bootstrap host..."
-
-ssh $username@$bootstrap_host sudo systemctl start mysql
-
-# echo "Cluster has been recovered."
+	while [[ `ssh $username@$host sudo mysqladmin ping &> /dev/null` ]]
+	do
+		if [ $? -eq 0 ]
+		then
+			break
+		fi
+	done
+fi
