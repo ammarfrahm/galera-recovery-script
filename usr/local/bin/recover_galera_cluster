@@ -7,7 +7,7 @@ username="ubuntu"
 for host in `cat < "$1" | sort -rn`
 do
 	# Get seqno value from grastate
-	seqno=`ssh $username@$host sudo grep seqno /var/lib/mysql/grastate.dat | awk -F' ' '{print $2}'`
+	seqno=`ssh $username@$host sudo awk '/seqno/{FS=" ";print $2}' /var/lib/mysql/grastate.dat`
 
 	if [[ $seqno -eq -1 ]]
 	then
@@ -20,7 +20,7 @@ do
 		else
 			# See seqno value from log
 			ssh $username@$host sudo mysqld -wsrep-recover
-			seqno_log=`cat /var/log/mysql/error.log | grep Found | tail -1 | awk -F ':' '{print $6}' | awk -F ',' '{print $1}'`
+			seqno_log=`awk '/Found/{FS="[:,]";s=$6}END{print s}' /var/log/mysql/error.seqno_log`
 			if [[ $seqno_log -gt $highest_seqno ]]; then
 				highest_seqno=$seqno
 				bootstrap_host=$host
