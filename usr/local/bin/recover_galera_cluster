@@ -1,25 +1,25 @@
 #!/bin/bash
 
 highest_seqno=-1
-username="ubuntu"
+username="root"
 
 # Traverse through all listed host
 for host in `cat < "$1" | sort -rn`
 do
 	# Get seqno value from grastate
-	seqno=`ssh $username@$host sudo awk '/seqno/{FS=" ";print $2}' /var/lib/mysql/grastate.dat`
+	seqno=`ssh $username@$host awk '/seqno/{FS=" ";print $2}' /var/lib/mysql/grastate.dat`
 
 	if [[ $seqno -eq -1 ]]
 	then
 		# Check if server is running
-		ssh $username@$host sudo mysqladmin ping &> /dev/null
+		ssh $username@$host mysqladmin ping &> /dev/null
 		if [ $? -eq 0 ]
 		then
 			bootstrap_host=$host
 			break
 		else
 			# See seqno value from log
-			ssh $username@$host sudo mysqld -wsrep-recover
+			ssh $username@$host mysqld -wsrep-recover
 			seqno_log=`awk '/Found/{FS="[:,]";s=$6}END{print s}' /var/log/mysql/error.seqno_log`
 			if [[ $seqno_log -gt $highest_seqno ]]; then
 				highest_seqno=$seqno
@@ -37,11 +37,11 @@ done
 if [[ `ifconfig | grep -c $bootstrap_host` -gt 0 ]]
 then
 	# Bootstrap the cluster
-	sudo sed -ie "/safe_to/c\safe_to_bootstrap:\ 1" /var/lib/mysql/grastate.dat
-	sudo galera_new_cluster
+	sed -ie "/safe_to/c\safe_to_bootstrap:\ 1" /var/lib/mysql/grastate.dat
+	galera_new_cluster
 else
 	# Wait for bootstrap host
-	while [[ `ssh $username@$host sudo mysqladmin ping &> /dev/null` ]]
+	while [[ `ssh $username@$host mysqladmin ping &> /dev/null` ]]
 	do
 		if [ $? -eq 0 ]
 		then
