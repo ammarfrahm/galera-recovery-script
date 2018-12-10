@@ -38,7 +38,7 @@ if [[ `ifconfig | grep -c $bootstrap_host` -gt 0 ]]
 then
 	# Bootstrap the cluster
 	sed -ie "/safe_to/c\safe_to_bootstrap:\ 1" /var/lib/mysql/grastate.dat
-	galera_new_cluster
+	/etc/init.d/mysql bootstrap-pxc
 else
 	# Wait for bootstrap host
 	while [[ `ssh $username@$host mysqladmin ping &> /dev/null` ]]
