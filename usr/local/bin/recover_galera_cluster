@@ -3,6 +3,17 @@
 highest_seqno=-1
 username="root"
 
+# Wait for all host to be alive
+for host in `cat < "$1" | sort -rn`
+do
+	while [[ `nc -vz $host 22` ]]; do
+		if [ $? -eq 0 ]
+		then
+			break
+		fi
+	done
+done
+
 # Traverse through all listed host
 for host in `cat < "$1" | sort -rn`
 do
