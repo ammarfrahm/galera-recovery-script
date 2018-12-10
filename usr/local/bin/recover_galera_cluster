@@ -31,7 +31,7 @@ do
 		else
 			# See seqno value from log
 			ssh $username@$host mysqld -wsrep-recover
-			seqno_log=`awk '/Found/{FS="[:,]";s=$6}END{print s}' /var/log/mysql/error.log`
+			seqno_log=`awk '/Found/{FS="[:,]";s=$6}END{print s}' /var/log/mysqld.log`
 			if [[ $seqno_log -gt $highest_seqno ]]; then
 				highest_seqno=$seqno
 				bootstrap_host=$host
