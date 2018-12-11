@@ -24,7 +24,7 @@ done
 for host in `cat < "$1" | sort -rn`
 do
 	# Get seqno value from grastate
-	seqno=`ssh $username@$host awk '/seqno/{FS=" ";print $2}' /var/lib/mysql/grastate.dat`
+	seqno=`ssh $username@$host grep seqno /var/lib/mysql/grastate.dat | awk -F ' ' '{print $2}'`
 
 	if [[ $seqno -eq -1 ]]
 	then
@@ -37,7 +37,7 @@ do
 		else
 			# See seqno value from log
 			ssh $username@$host mysqld -wsrep-recover
-			seqno_log=`awk '/Found/{FS="[:,]";s=$6}END{print s}' /var/log/mysqld.log`
+			seqno_log=`cat /var/log/mysqld.log | grep Found | tail -1 | awk -F ':' '{print $6}' | awk -F ',' '{print $1}'`
 			if [[ $seqno_log -gt $highest_seqno ]]; then
 				highest_seqno=$seqno
 				bootstrap_host=$host
