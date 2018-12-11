@@ -3,6 +3,12 @@
 highest_seqno=-1
 username="root"
 
+# Exit if cluster list file is empty
+if [[ ! -s $1 ]]
+then
+	{ echo "File $1 is empty"; exit 1; }
+fi
+
 # Wait for all host to be alive
 for host in `cat < "$1" | sort -rn`
 do
