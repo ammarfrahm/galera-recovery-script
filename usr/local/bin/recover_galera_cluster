@@ -3,7 +3,6 @@
 highest_seqno=-1
 username="root"
 
-
 # Exit if cluster list file is empty
 if [[ ! -s $1 ]]
 then
@@ -23,11 +22,9 @@ done
 # Wait for all host to be alive
 for host in ${hosts[*]}
 do
-	while [[ `nc -vz $host 22` ]]; do
-		if [ $? -eq 0 ]
-		then
-			break
-		fi
+	while ! nc -vz $host 22
+	do
+		sleep 0.1
 	done
 done
 
