@@ -3,14 +3,25 @@
 highest_seqno=-1
 username="root"
 
+
 # Exit if cluster list file is empty
 if [[ ! -s $1 ]]
 then
 	{ echo "File $1 is empty"; exit 1; }
 fi
 
+# Store list of host to hosts variable
+declare -a hosts
+
+count=0
+for host in `cat < "$1" | sort`
+do
+	hosts[$((count))]=$host
+	count=$((count + 1))
+done
+
 # Wait for all host to be alive
-for host in `cat < "$1" | sort -rn`
+for host in ${hosts[*]}
 do
 	while [[ `nc -vz $host 22` ]]; do
 		if [ $? -eq 0 ]
@@ -21,7 +32,7 @@ do
 done
 
 # Traverse through all listed host
-for host in `cat < "$1" | sort -rn`
+for host in ${hosts[*]}
 do
 	# Get seqno value from grastate
 	seqno=`ssh $username@$host grep seqno /var/lib/mysql/grastate.dat | awk -F ' ' '{print $2}'`
