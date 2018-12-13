@@ -31,22 +31,31 @@ done
 # Traverse through all listed host
 for host in ${hosts[*]}
 do
+	# Is current host is this host?
+	if [[ `ifconfig | grep -c $host` -gt 0 ]]
+	then
+		command=""
+	else
+		command="ssh $username@$host"
+	fi
+
 	# Get seqno value from grastate
-	seqno=`ssh $username@$host grep seqno /var/lib/mysql/grastate.dat | awk -F ' ' '{print $2}'`
+	seqno=`$command grep seqno /var/lib/mysql/grastate.dat | awk -F ' ' '{print $2}'`
 
 	if [[ $seqno -eq -1 ]]
 	then
 		# Check if server is running
-		ssh $username@$host mysqladmin ping &> /dev/null
+		$command mysqladmin ping &> /dev/null
 		if [ $? -eq 0 ]
 		then
 			bootstrap_host=$host
 			break
 		else
 			# See seqno value from log
-			ssh $username@$host mysqld -wsrep-recover
-			seqno_log=`cat /var/log/mysqld.log | grep 'Found saved state' | tail -1 | awk -F ':' '{print $6}' | awk -F ',' '{print $1}'`
-			if [[ $seqno_log -gt $highest_seqno ]]; then
+			$command -wsrep-recover
+			seqno_log=`$command cat /var/log/mysqld.log | grep 'Found saved state' | tail -1 | awk -F ':' '{print $6}' | awk -F ',' '{print $1}'`
+			if [[ $seqno_log -gt $highest_seqno ]]
+			then
 				highest_seqno=$seqno
 				bootstrap_host=$host
 			fi
