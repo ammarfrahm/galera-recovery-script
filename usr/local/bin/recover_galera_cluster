@@ -3,21 +3,15 @@
 highest_seqno=-1
 username="root"
 
-# Exit if cluster list file is empty
-if [[ ! -s $1 ]]
+# Exit if specified config file doesnt contain wsrep_cluster_address directive
+if [[ `cat $1 | grep -c wsrep_cluster_address` -lt 1 ]]
 then
-	{ echo "File $1 is empty"; exit 1; }
+	{ echo "$1 doesn't contain wsrep_cluster_address directive."; exit 1; }
 fi
 
-# Store list of host to hosts variable
-declare -a hosts
+cluster_string=`cat "$1" | grep wsrep_cluster_address | awk -F '//' '{print $2}' | awk -F '"' '{print $1}'`
 
-count=0
-for host in `sort -V $1`
-do
-	hosts[$((count))]=$host
-	count=$((count + 1))
-done
+IFS=',' read -r -a hosts <<< $cluster_string
 
 # Wait for all host to be alive
 for host in ${hosts[*]}
