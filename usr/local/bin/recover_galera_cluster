@@ -14,7 +14,7 @@ fi
 declare -a hosts
 
 count=0
-for host in `cat < "$1" | sort`
+for host in `sort -V $1`
 do
 	hosts[$((count))]=$host
 	count=$((count + 1))
